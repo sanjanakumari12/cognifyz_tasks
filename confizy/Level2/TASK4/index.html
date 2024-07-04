@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Advanced Form Validation and Dynamic DOM Manipulation</title>
+  <style>
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #333;
+      box-sizing: border-box;
+    }
+
+    input[type="submit"] {
+      background-color: #770a56;
+      color: #0c0c0c;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #d40bba;
+    }
+
+    .output {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #080342;
+      border-radius: 5px;
+      background-color: #f8f9fa;
+    }
+
+    .output.success {
+      border-color: #28a745;
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .output.error {
+      border-color: #dc3545;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .password-strength {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .password-strength.weak {
+      color: #dc3545;
+    }
+
+    .password-strength.medium {
+      color: #db3d0d;
+    }
+
+    .password-strength.strong {
+      color: #28a745;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    nav a {
+      margin: 0 10px;
+      cursor: pointer;
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    nav a.active {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#" id="formLink" class="active">Form</a>
+    <a href="#" id="confirmationLink">Confirmation</a>
+  </nav>
+
+  <div id="formSection">
+    <h1>FORM DOM</h1>
+    <form id="myForm">
+      <label for="name">Name:</label>
+      <input type="text" id="name" name="name" required><br><br>
+
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required><br><br>
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required><br><br>
+
+      <div id="passwordStrength" class="password-strength hidden"></div>
+
+      <label for="confirmPassword">Confirm Password:</label>
+      <input type="password" id="confirmPassword" name="confirmPassword" required><br><br>
+
+      <input type="submit" value="Submit">
+    </form>
+
+    <div id="output" class="output" style="display: none;"></div>
+  </div>
+
+  <div id="confirmationSection" class="hidden">
+    <h1>Confirmation</h1>
+    <p>Your form has been submitted successfully!</p>
+  </div>
+
+  <script>
+    const formSection = document.getElementById('formSection');
+    const confirmationSection = document.getElementById('confirmationSection');
+    const formLink = document.getElementById('formLink');
+    const confirmationLink = document.getElementById('confirmationLink');
+
+    function showSection(section) {
+      if (section === 'form') {
+        formSection.classList.remove('hidden');
+        confirmationSection.classList.add('hidden');
+        formLink.classList.add('active');
+        confirmationLink.classList.remove('active');
+        history.pushState(null, '', '#form');
+      } else if (section === 'confirmation') {
+        formSection.classList.add('hidden');
+        confirmationSection.classList.remove('hidden');
+        formLink.classList.remove('active');
+        confirmationLink.classList.add('active');
+        history.pushState(null, '', '#confirmation');
+      }
+    }
+
+    window.addEventListener('popstate', () => {
+      if (location.hash === '#confirmation') {
+        showSection('confirmation');
+      } else {
+        showSection('form');
+      }
+    });
+
+    formLink.addEventListener('click', () => showSection('form'));
+    confirmationLink.addEventListener('click', () => showSection('confirmation'));
+
+    function checkPasswordStrength(password) {
+      const strengthElement = document.getElementById('passwordStrength');
+      strengthElement.classList.remove('hidden');
+      
+      let strength = '';
+      if (password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
+        strength = 'strong';
+      } else if (password.length >= 6) {
+        strength = 'medium';
+      } else {
+        strength = 'weak';
+      }
+      
+      strengthElement.textContent = `Password strength: ${strength}`;
+      strengthElement.className = `password-strength ${strength}`;
+    }
+
+    document.getElementById('password').addEventListener('input', (e) => {
+      checkPasswordStrength(e.target.value);
+    });
+
+    document.getElementById('myForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const output = document.getElementById('output');
+
+      if (password !== confirmPassword) {
+        output.textContent = 'Passwords do not match';
+        output.className = 'output error';
+        output.style.display = 'block';
+        return;
+      }
+
+      try {
+        const validateResponse = await fetch('/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, email, password })
+        });
+        const validateData = await validateResponse.json();
+
+        if (validateData.valid) {
+          output.textContent = 'Form data is valid!';
+          output.className = 'output success';
+          output.style.display = 'block';
+
+          const storeResponse = await fetch('/store', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ name, email, password })
+          });
+          const storeData = await storeResponse.json();
+
+          if (storeData.success) {
+            console.log('Data stored successfully!');
+            output.textContent = 'Data stored successfully!';
+            showSection('confirmation');
+          } else {
+            output.textContent = 'Error storing data: ' + storeData.message;
+            output.className = 'output error';
+            output.style.display = 'block';
+            console.error('Error storing data:', storeData.message);
+          }
+        } else {
+          output.textContent = 'Form data is invalid: ' + validateData.error;
+          output.className = 'output error';
+          output.style.display = 'block';
+        }
+      } catch (error) {
+        output.textContent = 'Error processing form data: ' + error;
+        output.className = 'output error';
+        output.style.display = 'block';
+        console.error('Error processing form data:', error);
+      }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (location.hash === '#confirmation') {
+        showSection('confirmation');
+      } else {
+        showSection('form');
+      }
+    });
+  </script>
+</body>
+</html>

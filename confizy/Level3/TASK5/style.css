@@ -1,0 +1,43 @@
+
+
+.intro { 
+    text-align: center; 
+    font-family: Arial;
+
+  }
+  
+  h2 { 
+    font-size: 36px;
+  }
+  
+  p { 
+    font-size: 14pt;
+  }
+  
+  #image-gallery { 
+    width: 400px; 
+    margin: 0 auto;
+    background-color: aqua;
+    display: flex;
+    align-items: center;
+  }
+  
+  #current-image { 
+    width: 100%;
+  } 
+
+  #image-thumbs { 
+    display: flex; 
+    justify-content: center; 
+    margin-top: 250px;
+    display: flex;
+    align-items: center;
+    margin-left: -100px;
+  }
+
+.thumb { 
+    width: 80px; 
+    height: 80px; 
+    object-fit: cover; 
+    cursor: pointer;
+  }
